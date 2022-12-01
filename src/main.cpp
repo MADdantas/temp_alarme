@@ -49,6 +49,7 @@ void setup() {
   if(wm_nonblocking) wm.setConfigPortalBlocking(false);
 
   sensor.begin(); ; // Inicia o sensor
+  pinMode(RELAY_PIN, OUTPUT); // Define o pino do relé como saída
 }
 
 void checkButton(){
@@ -131,4 +132,11 @@ void loop() {
   checkButton();
   temperatura = sensor_read();
   POST(ID, temperatura);
+  if (temperatura >= MAX_TEMP){ // Caso temperatura ultrapasse os 30 graus Celsius aciona o rele
+    digitalWrite(RELAY_PIN, HIGH); // Rele acionado
+  } 
+  else  {
+    digitalWrite(RELAY_PIN, LOW); // Temperatura abaixo de 30 graus Celsius desliga o rele
+  }
+  delay(1000); // Espera 1 segundo para repetir a leitura
 }
