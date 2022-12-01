@@ -25,10 +25,13 @@ const char* serverName = "http://localhost/update-sensor.php";
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastTime = 0;
-// Timer set to 10 minutes (600000)
-//unsigned long timerDelay = 600000;
+// Timer set to 1 minute (600000)
+unsigned long timerDelay = 60000;
 // Set timer to 5 seconds (5000)
-unsigned long timerDelay = 5000;
+// unsigned long timerDelay = 5000;
+
+unsigned long relay_lastTime = 0;
+unsigned long relay_timerDelay = 1000;
 
 int temperatura;
 OneWire oneWire(TEMPERATURE_PIN); // Cria um objeto OneWire
@@ -127,16 +130,23 @@ void POST(String identificador, int temperatura){
   }
 }
 
+void relay(int temperatura){
+  if ((millis() - relay_lastTime) > relay_timerDelay) {
+    if (temperatura >= MAX_TEMP){ // Caso temperatura ultrapasse os 30 graus Celsius aciona o rele
+      digitalWrite(RELAY_PIN, LOW); // Rele acionado
+    } 
+    else  {
+      digitalWrite(RELAY_PIN, HIGH); // Temperatura abaixo de 30 graus Celsius desliga o rele
+    }
+    relay_lastTime = millis();
+  }
+}
+
 void loop() {
   if(wm_nonblocking) wm.process(); // avoid delays() in loop when non-blocking and other long running code  
   checkButton();
   temperatura = sensor_read();
+  relay(temperatura);
   POST(ID, temperatura);
-  if (temperatura >= MAX_TEMP){ // Caso temperatura ultrapasse os 30 graus Celsius aciona o rele
-    digitalWrite(RELAY_PIN, HIGH); // Rele acionado
-  } 
-  else  {
-    digitalWrite(RELAY_PIN, LOW); // Temperatura abaixo de 30 graus Celsius desliga o rele
-  }
-  delay(1000); // Espera 1 segundo para repetir a leitura
+  
 }
