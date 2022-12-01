@@ -110,9 +110,9 @@ void POST(String identificador, int temperatura){
       http.begin(client, serverName);
       
       // Specify content-type header
-      http.addHeader("Content-Type", "text/plain");
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
       // Data to send with HTTP POST
-      String httpRequestData = "ID: " + identificador + "Temperatura: " + temperatura;
+      String httpRequestData = "ID="+identificador+"&temperatura="+String(temperatura);
       // Send HTTP POST request
       int httpResponseCode = http.POST(httpRequestData);
      
