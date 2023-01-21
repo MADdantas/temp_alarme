@@ -1,152 +1,188 @@
-#include <Arduino.h>
+// Import required libraries
+#ifdef ESP32
+  #include <WiFi.h>
+  #include <ESPAsyncWebServer.h>
+#else
+  #include <Arduino.h>
+  #include <ESP8266WiFi.h>
+  #include <Hash.h>
+  #include <ESPAsyncTCP.h>
+  #include <ESPAsyncWebServer.h>
+#endif
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <WiFiManager.h>
 #include <HTTPClient.h>
 
-// Implements TRIGGEN_PIN button press, press for ondemand configportal, hold for 3 seconds for reset settings.
-#define TRIGGER_PIN 27
-#define TEMPERATURE_PIN 5
-#define RELAY_PIN 21
-#define MAX_TEMP 60
+// Data wire is connected to GPIO 4
+#define ONE_WIRE_BUS 4
 
-// NC = Nova Ceasa, P1 = Portaria 1, C1 = Cancela 1
-#define ID "NC_P1_C1" 
+// Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(ONE_WIRE_BUS);
 
-// wifimanager can run in a blocking mode or a non blocking mode
-// Be sure to know how to process loops with no delay() if using non blocking
-bool wm_nonblocking = false; // change to true to use non blocking
+// Pass our oneWire reference to Dallas Temperature sensor 
+DallasTemperature sensors(&oneWire);
 
-WiFiManager wm; // global wm instance
+// Variables to store temperature values
+String temperatureF = "";
+String temperatureC = "";
 
-//Your Domain name with URL path or IP address with path
-const char* serverName = "http://localhost/update-sensor.php";
+// Timer variables
+unsigned long lastTime = 0;  
+unsigned long timerDelay = 10000;
 
-// the following variables are unsigned longs because the time, measured in
-// milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastTime = 0;
-// Timer set to 1 minute (600000)
-unsigned long timerDelay = 60000;
-// Set timer to 5 seconds (5000)
-// unsigned long timerDelay = 5000;
+// Replace with your network credentials
+const char* ssid = "Projeto MOVE";
+const char* password = "!Ceasa@2023";
 
-unsigned long relay_lastTime = 0;
-unsigned long relay_timerDelay = 1000;
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
 
-int temperatura;
-OneWire oneWire(TEMPERATURE_PIN); // Cria um objeto OneWire
-DallasTemperature sensor(&oneWire); // Informa a referencia da biblioteca dallas temperature para Biblioteca onewire
-DeviceAddress endereco_temp; // Cria um endereco temporario da leitura do sensor
+String readDSTemperatureC() {
+  // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
+  sensors.requestTemperatures(); 
+  float tempC = sensors.getTempCByIndex(0);
 
-void setup() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP 
-  Serial.begin(115200);
-  wm.setDebugOutput(true);
-  delay(3000);
-  Serial.println("\n Starting");
-
-  pinMode(TRIGGER_PIN, INPUT);
-
-  // wm.resetSettings(); // wipe settings
-
-  if(wm_nonblocking) wm.setConfigPortalBlocking(false);
-
-  sensor.begin(); ; // Inicia o sensor
-  pinMode(RELAY_PIN, OUTPUT); // Define o pino do relé como saída
-}
-
-void checkButton(){
-  // check for button press
-  if ( digitalRead(TRIGGER_PIN) == LOW ) {
-    // poor mans debounce/press-hold, code not ideal for production
-    delay(50);
-    if( digitalRead(TRIGGER_PIN) == LOW ){
-      Serial.println("Button Pressed");
-      // still holding button for 3000 ms, reset settings, code not ideal for production
-      delay(3000); // reset delay hold
-      if( digitalRead(TRIGGER_PIN) == LOW ){
-        Serial.println("Button Held");
-        Serial.println("Erasing Config, restarting");
-        wm.resetSettings();
-        ESP.restart();
-      }
-      
-      // start portal w delay
-      Serial.println("Starting config portal");
-      wm.setConfigPortalTimeout(120);
-      
-      if (!wm.startConfigPortal("Alarme de temperatura","1234")) {
-        Serial.println("failed to connect or hit timeout");
-        delay(3000);
-        // ESP.restart();
-      } else {
-        //if you get here you have connected to the WiFi
-        Serial.println("connected...yeey :)");
-      }
-    }
-  }
-}
-
-int sensor_read(){
-  sensor.requestTemperatures(); // Envia comando para realizar a conversão de temperatura
-  if (!sensor.getAddress(endereco_temp,0)) { // Encontra o endereco do sensor no barramento
-    Serial.println("SENSOR NAO CONECTADO"); // Sensor conectado, imprime mensagem de erro
-    return -1;
+  if(tempC == -127.00) {
+    Serial.println("Failed to read from DS18B20 sensor");
+    return "--";
   } else {
-    Serial.print("Temperatura = "); // Imprime a temperatura no monitor serial
-    Serial.println(sensor.getTempC(endereco_temp), 1); // Busca temperatura para dispositivo
-    return sensor.getTempC(endereco_temp);
+    Serial.print("Temperature Celsius: ");
+    Serial.println(tempC); 
   }
+  return String(tempC);
 }
 
-void POST(String identificador, int temperatura){
-  if ((millis() - lastTime) > timerDelay) {
-    //Check WiFi connection status
-    if(WiFi.status()== WL_CONNECTED){
-      WiFiClient client;
-      HTTPClient http;
-    
-      // Your Domain name with URL path or IP address with path
-      http.begin(client, serverName);
-      
-      // Specify content-type header
-      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      // Data to send with HTTP POST
-      String httpRequestData = "ID="+identificador+"&temperatura="+String(temperatura)+"";
-      // Send HTTP POST request
-      int httpResponseCode = http.POST(httpRequestData);
-     
-      Serial.print("HTTP Response code: ");
-      Serial.println(httpResponseCode);
-      
+String readDSTemperatureF() {
+  // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
+  sensors.requestTemperatures(); 
+  float tempF = sensors.getTempFByIndex(0);
 
-      // Free resources
-      http.end();
-    }
-    else {
-      Serial.println("WiFi Disconnected");
-    }
-    lastTime = millis();
+  if(int(tempF) == -196){
+    Serial.println("Failed to read from DS18B20 sensor");
+    return "--";
+  } else {
+    Serial.print("Temperature Fahrenheit: ");
+    Serial.println(tempF);
   }
+  return String(tempF);
 }
 
-void relay(int temperatura){
-  if ((millis() - relay_lastTime) > relay_timerDelay) {
-    if (temperatura >= MAX_TEMP){ // Caso temperatura ultrapasse os 30 graus Celsius aciona o rele
-      digitalWrite(RELAY_PIN, LOW); // Rele acionado
-    } 
-    else  {
-      digitalWrite(RELAY_PIN, HIGH); // Temperatura abaixo de 30 graus Celsius desliga o rele
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="5" />
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+  <style>
+    html {
+     font-family: Arial;
+     display: inline-block;
+     margin: 0px auto;
+     text-align: center;
     }
-    relay_lastTime = millis();
+    h2 { font-size: 3.0rem; }
+    p { font-size: 3.0rem; }
+    .units { font-size: 1.2rem; }
+    .ds-labels{
+      font-size: 1.5rem;
+      vertical-align:middle;
+      padding-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h2>ESP DS18B20 Server</h2>
+  <p>
+    <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
+    <span class="ds-labels">Temperature Celsius</span> 
+    <span id="temperaturec">%TEMPERATUREC%</span>
+    <sup class="units">&deg;C</sup>
+  </p>
+  <p>
+    <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
+    <span class="ds-labels">Temperature Fahrenheit</span>
+    <span id="temperaturef">%TEMPERATUREF%</span>
+    <sup class="units">&deg;F</sup>
+  </p>
+</body>
+<script>
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("temperaturec").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "/temperaturec", true);
+  xhttp.send();
+}, 10000) ;
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("temperaturef").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "/temperaturef", true);
+  xhttp.send();
+}, 10000) ;
+</script>
+</html>)rawliteral";
+
+// Replaces placeholder with DS18B20 values
+String processor(const String& var){
+  //Serial.println(var);
+  if(var == "TEMPERATUREC"){
+    return temperatureC;
   }
+  else if(var == "TEMPERATUREF"){
+    return temperatureF;
+  }
+  return String();
 }
 
-void loop() {
-  if(wm_nonblocking) wm.process(); // avoid delays() in loop when non-blocking and other long running code  
-  checkButton();
-  temperatura = sensor_read();
-  relay(temperatura);
-  POST(ID, temperatura);
+void setup(){
+  // Serial port for debugging purposes
+  Serial.begin(115200);
+  Serial.println();
   
+  // Start up the DS18B20 library
+  sensors.begin();
+
+  temperatureC = readDSTemperatureC();
+  temperatureF = readDSTemperatureF();
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  
+  // Print ESP Local IP Address
+  Serial.println(WiFi.localIP());
+  
+  // Route for root / web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+  });
+  server.on("/temperaturec", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", temperatureC.c_str());
+  });
+  server.on("/temperaturef", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", temperatureF.c_str());
+  });
+  // Start server
+  server.begin();
+}
+ 
+void loop(){
+  
+  if ((millis() - lastTime) > timerDelay) {
+    temperatureC = readDSTemperatureC();
+    temperatureF = readDSTemperatureF();
+    lastTime = millis();
+  } 
 }
