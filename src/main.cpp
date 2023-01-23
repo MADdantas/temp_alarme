@@ -15,10 +15,10 @@ DallasTemperature sensors(&oneWire);
 
 // Timer variables
 unsigned long lastTime = 0;  
-unsigned long timerDelay = 10000;
+unsigned long timerDelay = 60000; // Delay de envio do valor de temperatura
 
-const char WIFI_SSID[] = "Projeto MOVE";
-const char WIFI_PASSWORD[] = "!Ceasa@2023";
+const char WIFI_SSID[] = "Portaria JAP"; // SSID da rede wifi
+const char WIFI_PASSWORD[] = "!Jap@2022"; // Senha da rede wifi
 
 String readDSTemperatureC() {
   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
@@ -35,14 +35,19 @@ String readDSTemperatureC() {
   return String(tempC);
 }
 
-
 void post_values(String temp){
   HTTPClient http;
   
-  String ID = "Sensor2";
-  String HOST_NAME = "http://10.5.62.152:8480"; // change to your PC's IP address
+  // Dados para o Banco de Dados
+  const String ID = "Sensor5"; // Identificação do sensor
+  const int portaria = 3; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
+  const String tpacesso = "E"; // E para entrada e S para saída
+  const int acesso = 1; // Número do acesso da portaria. Portaria 2 e Acesso 1. O Acesso 1 pode ser o Acesso 1 da entrada ou o Acesso 1 da saída.
+
+  // URL para onde serão enviados os dados
+  String HOST_NAME = "http://10.5.62.152:8480";
   String PATH_NAME   = "/esp32/echo.php";
-  String queryString = "?ID="+ID+"&ST="+temp;
+  String queryString = "?ID="+ID+"&ST="+temp+"&PORT="+portaria+"&TPACESS="+tpacesso+"&ACESS="+acesso; // Passando valores via GET
   Serial.println(HOST_NAME + PATH_NAME + queryString);
   http.begin(HOST_NAME + PATH_NAME + queryString); //HTTP
   int httpCode = http.GET();
@@ -63,7 +68,6 @@ void post_values(String temp){
 
   http.end();
 }
-
 
 void setup() {
   Serial.begin(115200); 
