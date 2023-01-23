@@ -17,8 +17,8 @@ DallasTemperature sensors(&oneWire);
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60000; // Delay de envio do valor de temperatura
 
-const char WIFI_SSID[] = "Portaria JAP"; // SSID da rede wifi
-const char WIFI_PASSWORD[] = "!Jap@2022"; // Senha da rede wifi
+const char WIFI_SSID[] = "Portaria SACI"; // SSID da rede wifi
+const char WIFI_PASSWORD[] = "!Saci@2022"; // Senha da rede wifi
 
 String readDSTemperatureC() {
   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
@@ -39,9 +39,9 @@ void post_values(String temp){
   HTTPClient http;
   
   // Dados para o Banco de Dados
-  const String ID = "Sensor5"; // Identificação do sensor
+  const String ID = "Sensor6"; // Identificação do sensor
   const int portaria = 3; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
-  const String tpacesso = "E"; // E para entrada e S para saída
+  const String tpacesso = "S"; // E para entrada e S para saída
   const int acesso = 1; // Número do acesso da portaria. Portaria 2 e Acesso 1. O Acesso 1 pode ser o Acesso 1 da entrada ou o Acesso 1 da saída.
 
   // URL para onde serão enviados os dados
