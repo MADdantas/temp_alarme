@@ -1,8 +1,12 @@
+#include <AsyncElegantOTA.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <HTTPClient.h>
+
+// WEBServer
+AsyncWebServer server(80);
 
 // Data wire is connected to GPIO 4
 #define ONE_WIRE_BUS 4
@@ -17,8 +21,8 @@ DallasTemperature sensors(&oneWire);
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60000; // Delay de envio do valor de temperatura
 
-const char WIFI_SSID[] = "Portaria SACI"; // SSID da rede wifi
-const char WIFI_PASSWORD[] = "!Saci@2022"; // Senha da rede wifi
+const char WIFI_SSID[] = "Projeto MOVE"; // SSID da rede wifi
+const char WIFI_PASSWORD[] = "!Ceasa@2023"; // Senha da rede wifi
 
 String readDSTemperatureC() {
   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
@@ -39,7 +43,7 @@ void post_values(String temp){
   HTTPClient http;
   
   // Dados para o Banco de Dados
-  const String ID = "Sensor6"; // Identificação do sensor
+  const String ID = "Test2"; // Identificação do sensor
   const int portaria = 3; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
   const String tpacesso = "S"; // E para entrada e S para saída
   const int acesso = 1; // Número do acesso da portaria. Portaria 2 e Acesso 1. O Acesso 1 pode ser o Acesso 1 da entrada ou o Acesso 1 da saída.
@@ -82,6 +86,10 @@ void setup() {
   Serial.println("");
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
+
+  // OTA
+  AsyncElegantOTA.begin(&server);
+  server.begin();
   
 }
 
