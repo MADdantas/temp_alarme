@@ -20,7 +20,7 @@ DallasTemperature sensors(&oneWire);
 
 // Timer variables
 unsigned long lastTime = 0;  
-unsigned long timerDelay = 5000; // Delay de envio do valor de temperatura
+unsigned long timerDelay = 300000; // Delay de envio do valor de temperatura
 
 const char WIFI_SSID[] = "Portaria BB"; // SSID da rede wifi
 const char WIFI_PASSWORD[] = "!Bb@2023"; // Senha da rede wifi
@@ -44,8 +44,8 @@ void post_values(String temp){
   HTTPClient http;
   
   // Dados para o Banco de Dados
-  const String ID = "BBS4"; // Identificação do sensor
-  const int portaria = 1; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
+  const String ID = "BBS6"; // Identificação do sensor
+  const int portaria = 2; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
   const String tpacesso = "E"; // E para entrada e S para saída
   const int acesso = 1; // Número do acesso da portaria. Portaria 2 e Acesso 1. O Acesso 1 pode ser o Acesso 1 da entrada ou o Acesso 1 da saída.
 
