@@ -10,6 +10,7 @@ AsyncWebServer server(80);
 
 // Data wire is connected to GPIO 4
 #define ONE_WIRE_BUS 4
+#define LED 2
 
 // Setup a oneWire instance to communicate with any OneWire devices
 OneWire oneWire(ONE_WIRE_BUS);
@@ -19,10 +20,10 @@ DallasTemperature sensors(&oneWire);
 
 // Timer variables
 unsigned long lastTime = 0;  
-unsigned long timerDelay = 60000; // Delay de envio do valor de temperatura
+unsigned long timerDelay = 5000; // Delay de envio do valor de temperatura
 
-const char WIFI_SSID[] = "Projeto MOVE"; // SSID da rede wifi
-const char WIFI_PASSWORD[] = "!Ceasa@2023"; // Senha da rede wifi
+const char WIFI_SSID[] = "Portaria BB"; // SSID da rede wifi
+const char WIFI_PASSWORD[] = "!Bb@2023"; // Senha da rede wifi
 
 String readDSTemperatureC() {
   // Call sensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
@@ -31,7 +32,7 @@ String readDSTemperatureC() {
 
   if(tempC == -127.00) {
     Serial.println("Failed to read from DS18B20 sensor");
-    return "--";
+    return "__";
   } else {
     Serial.print("Temperature Celsius: ");
     Serial.println(tempC); 
@@ -43,9 +44,9 @@ void post_values(String temp){
   HTTPClient http;
   
   // Dados para o Banco de Dados
-  const String ID = "Test2"; // Identificação do sensor
-  const int portaria = 3; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
-  const String tpacesso = "S"; // E para entrada e S para saída
+  const String ID = "BBS4"; // Identificação do sensor
+  const int portaria = 1; // Número da portaria. Portaria 1, Portaria 2, Portaria 3...
+  const String tpacesso = "E"; // E para entrada e S para saída
   const int acesso = 1; // Número do acesso da portaria. Portaria 2 e Acesso 1. O Acesso 1 pode ser o Acesso 1 da entrada ou o Acesso 1 da saída.
 
   // URL para onde serão enviados os dados
@@ -62,6 +63,7 @@ void post_values(String temp){
     if(httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
       Serial.println(payload);
+      digitalWrite(LED,HIGH);
     } else {
       // HTTP header has been send and Server response header has been handled
       Serial.printf("[HTTP] GET... code: %d\n", httpCode);
@@ -75,14 +77,14 @@ void post_values(String temp){
 
 void setup() {
   Serial.begin(115200); 
-
+  pinMode(LED, OUTPUT);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Connecting");
   while(WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-
+  digitalWrite(LED,HIGH);
   Serial.println("");
   Serial.print("Connected to WiFi network with IP Address: ");
   Serial.println(WiFi.localIP());
@@ -99,5 +101,7 @@ void loop() {
     post_values(temp);
     lastTime = millis();
   } 
+  delay(500);
+  digitalWrite(LED,LOW);
   
 }
