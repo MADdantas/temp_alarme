@@ -96,12 +96,16 @@ void setup() {
 }
 
 void loop() {
-  if ((millis() - lastTime) > timerDelay) {
-    String temp = readDSTemperatureC();
-    post_values(temp);
-    lastTime = millis();
-  } 
-  delay(500);
-  digitalWrite(LED,LOW);
+  if(WiFi.status()== WL_CONNECTED){
+    if ((millis() - lastTime) > timerDelay) {
+      String temp = readDSTemperatureC();
+      post_values(temp);
+      lastTime = millis();
+    } 
+    delay(500);
+    digitalWrite(LED,LOW);
+  } else{
+    ESP.restart();
+  }
   
 }
